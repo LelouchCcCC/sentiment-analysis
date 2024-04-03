@@ -1,0 +1,13 @@
+target/
+.idea/
+.bsp/
+.vscode/
+logs/
+admin/build/
+web/build/
+local.env
+
+.metals/
+.bloop/
+.ammonite/
+metals.sbt
