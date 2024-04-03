@@ -1,0 +1,5 @@
+package dataApi
+
+object DataApi {
+
+}
