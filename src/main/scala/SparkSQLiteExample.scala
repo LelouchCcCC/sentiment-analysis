@@ -7,7 +7,7 @@ object SparkSQLiteExample extends App {
     .getOrCreate()
 
   // SQLite 数据库文件路径
-  val dbPath = "resources/database/database.sqlite"
+  val dbPath = "src/main/resources/database/database.sqlite"
   val dbUrl = s"jdbc:sqlite:$dbPath"
 
   // 数据库表名
