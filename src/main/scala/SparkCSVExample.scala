@@ -1,3 +1,4 @@
+import dataProcessor.DataProcessor
 import org.apache.spark.sql.SparkSession
 
 object AirlineAnalysis extends App {
@@ -14,10 +15,11 @@ object AirlineAnalysis extends App {
   val filename = "src/main/resources/data/airline.csv"
 
   // Load the CSV file
-  val df = spark.read
-    .option("header", "true") // Assuming the first row contains column names
-    .option("inferSchema", "true") // Infer data types
-    .csv(filename)
+  val df = DataProcessor.loadData(spark,filename)
+
+  val changedTimeDF = DataProcessor.changeTime(df,spark)
+
+  changedTimeDF.show(20)
 
   // Assuming the column containing ratings is named "rating"
   val ratings = df.select("airline_sentiment_confidence").na.drop() // Drop rows with null ratings
