@@ -10,7 +10,7 @@ import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql._
 import org.apache.spark.{SparkConf, SparkContext}
 import sentiment.mllib.MLlibSentimentAnalyzer
-import utils.{ConstantsUtil, StopwordsUtil}
+import utils.{Constants, SQLContextSingleton, StopwordsLoader}
 
 
 
@@ -25,7 +25,7 @@ object SparkNaiveBayesModelCreator {
 
     //LogUtils.setLogLevels(sc)
 
-    val stopWordsList = sc.broadcast(StopwordsUtil.loadStopWords(ConstantsUtil.STOP_WORDS))
+    val stopWordsList = sc.broadcast(StopwordsLoader.loadStopWords(Constants.STOP_WORDS))
     createAndSaveNBModel(sc, stopWordsList)
     validateAccuracyOfNBModel(sc, stopWordsList)
   }
@@ -61,7 +61,7 @@ object SparkNaiveBayesModelCreator {
    * @param stopWordsList -- Broadcast variable for list of stop words to be removed from the tweets.
    */
   def createAndSaveNBModel(sc: SparkContext, stopWordsList: Broadcast[List[String]]): Unit = {
-    val tweetsDF: DataFrame = loadSentiment140File(sc, ConstantsUtil.sentiment140TrainingFilePath)
+    val tweetsDF: DataFrame = loadSentiment140File(sc, Constants.sentiment140TrainingFilePath)
 
     val labeledRDD = tweetsDF.select("polarity", "status").rdd.map {
       case Row(polarity: Int, tweet: String) =>
@@ -71,7 +71,7 @@ object SparkNaiveBayesModelCreator {
     labeledRDD.cache()
 
     val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(labeledRDD, lambda = 1.0, modelType = "multinomial")
-    naiveBayesModel.save(sc, ConstantsUtil.naiveBayesModelPath)
+    naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
   }
 
   /**
@@ -81,9 +81,9 @@ object SparkNaiveBayesModelCreator {
    * @param stopWordsList -- Broadcast variable for list of stop words to be removed from the tweets.
    */
   def validateAccuracyOfNBModel(sc: SparkContext, stopWordsList: Broadcast[List[String]]): Unit = {
-    val naiveBayesModel: NaiveBayesModel = NaiveBayesModel.load(sc, ConstantsUtil.naiveBayesModelPath)
+    val naiveBayesModel: NaiveBayesModel = NaiveBayesModel.load(sc, Constants.naiveBayesModelPath)
 
-    val tweetsDF: DataFrame = loadSentiment140File(sc, ConstantsUtil.sentiment140TestingFilePath)
+    val tweetsDF: DataFrame = loadSentiment140File(sc, Constants.sentiment140TestingFilePath)
     val actualVsPredictionRDD = tweetsDF.select("polarity", "status").rdd.map {
       case Row(polarity: Int, tweet: String) =>
         val tweetText = replaceNewLines(tweet)
@@ -139,6 +139,6 @@ object SparkNaiveBayesModelCreator {
       // Compression codec to compress while saving to file.
       .option("codec", classOf[GzipCodec].getCanonicalName)
       .mode(SaveMode.Append)
-      .save(ConstantsUtil.modelAccuracyPath)
+      .save(Constants.modelAccuracyPath)
   }
 }
