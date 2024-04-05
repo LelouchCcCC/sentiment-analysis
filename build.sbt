@@ -13,6 +13,8 @@ libraryDependencies ++= Seq(
   "org.xerial" % "sqlite-jdbc" % "3.39.3.0",
   "edu.stanford.nlp" % "stanford-corenlp" % coreNlpVersion,
   "edu.stanford.nlp" % "stanford-corenlp" % coreNlpVersion classifier "models",
+  // https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-core
+  "com.typesafe.akka" %% "akka-http-core" % "10.5.3"
 )
 
 
