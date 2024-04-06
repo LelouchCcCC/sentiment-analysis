@@ -1,6 +1,7 @@
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{col, udf}
 import sentiment.mllib.MLlibSentimentAnalyzer
+import dataProcessor.DataProcessor.{loadData,changeTime}
 import utils.{Constants, StopwordsLoader}
 import org.apache.spark.mllib.classification.NaiveBayesModel
 
@@ -22,9 +23,7 @@ object TextSentimentAnalysisExample {
 
     // 加载CSV文件
     val filePath = s"../resources/data/${Constants.TESTING_CSV_FILE_NAME}"
-    val df = spark.read
-      .option("header", "true")
-      .csv(filePath)
+    val df = loadData(spark,filePath)
 
     // 定义一个UDF，用于调用MLlibSentimentAnalyzer进行情感分析
     val sentimentAnalysisUdf = udf { text: String =>

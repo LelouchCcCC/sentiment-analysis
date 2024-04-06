@@ -27,7 +27,7 @@ object DataProcessor {
     val filteredDf = df.filter(isValidDate(df("tweet_created")))
     import spark.implicits._
     val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "yyyy-MM-dd HH:mm:ss Z"))
-    adjustedDf
+    changeTime(adjustedDf,spark)
   }
 
 
