@@ -23,6 +23,7 @@ object SparkNaiveBayesModelCreator {
   val testFile = Constants.TESTING_CSV_FILE_NAME;
   val trainFilePath = s"../../../resources/data/$trainFile"
   val testFilePath = s"../../../resources/data/$testFile"
+
   def main(args: Array[String]) {
     val sc = createSparkContext()
 
@@ -67,15 +68,26 @@ object SparkNaiveBayesModelCreator {
     //加载train用的data set
     val tweetsDF: DataFrame = loadSentimentFile(sc, trainFilePath)
 
-    val labeledRDD = tweetsDF.select("polarity", "status").rdd.map {
-      case Row(polarity: Int, tweet: String) =>
+    // 选择 `sentiment` 和 `text` 列，假设 `text` 列包含推文文本
+    val labeledRDD = tweetsDF.select("sentiment", "text").rdd.map {
+      case Row(sentiment: Int, tweet: String) =>
         val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
-        LabeledPoint(polarity, MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
+        LabeledPoint(sentiment.toDouble, MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
     }
     labeledRDD.cache()
 
+    // 训练朴素贝叶斯模型
     val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(labeledRDD, lambda = 1.0, modelType = "multinomial")
     naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
+//    val labeledRDD = tweetsDF.select("polarity", "status").rdd.map {
+//      case Row(polarity: Int, tweet: String) =>
+//        val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
+//        LabeledPoint(polarity, MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
+//    }
+//    labeledRDD.cache()
+//
+//    val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(labeledRDD, lambda = 1.0, modelType = "multinomial")
+//    naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
   }
 
   /**
@@ -106,7 +118,7 @@ object SparkNaiveBayesModelCreator {
   }
 
   /**
-   * Loads the Sentiment140 file from the specified path using SparkContext.
+   * Loads the Sentiment file from the specified path using SparkContext.
    *
    * @param sc                   -- Spark Context.
    * @param filePath -- Absolute file path of Sentiment140.
@@ -119,7 +131,6 @@ object SparkNaiveBayesModelCreator {
       .option("header", "false")
       .option("inferSchema", "true")
       .load(filePath)
-      .toDF("polarity", "id", "date", "query", "user", "status")
 
     /**
      * sentiment: -1, 0, 1 represent positive, neutral, negative
