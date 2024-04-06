@@ -21,8 +21,8 @@ import utils.{Constants, SQLContextSingleton, StopwordsLoader}
 object SparkNaiveBayesModelCreator {
   val trainFile = Constants.TRAINING_CSV_FILE_NAME;
   val testFile = Constants.TESTING_CSV_FILE_NAME;
-  val trainFilePath = s"../../../resources/data/$trainFile"
-  val testFilePath = s"../../../resources/data/$testFile"
+  val trainFilePath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/resources/data/airline.csv"
+  val testFilePath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/resources/data/airline.csv"
 
   def main(args: Array[String]) {
     val sc = createSparkContext()
@@ -31,7 +31,7 @@ object SparkNaiveBayesModelCreator {
 
     val stopWordsList = sc.broadcast(StopwordsLoader.loadStopWords(Constants.STOP_WORDS))
     createAndSaveNBModel(sc, stopWordsList)
-    validateAccuracyOfNBModel(sc, stopWordsList)
+    //validateAccuracyOfNBModel(sc, stopWordsList)
   }
 
   /**
@@ -53,6 +53,7 @@ object SparkNaiveBayesModelCreator {
   def createSparkContext(): SparkContext = {
     val conf = new SparkConf()
       .setAppName(this.getClass.getSimpleName)
+      .setMaster("local[*]")
       .set("spark.serializer", classOf[KryoSerializer].getCanonicalName)
     val sc = SparkContext.getOrCreate(conf)
     sc
@@ -79,15 +80,6 @@ object SparkNaiveBayesModelCreator {
     // 训练朴素贝叶斯模型
     val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(labeledRDD, lambda = 1.0, modelType = "multinomial")
     naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
-//    val labeledRDD = tweetsDF.select("polarity", "status").rdd.map {
-//      case Row(polarity: Int, tweet: String) =>
-//        val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
-//        LabeledPoint(polarity, MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
-//    }
-//    labeledRDD.cache()
-//
-//    val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(labeledRDD, lambda = 1.0, modelType = "multinomial")
-//    naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
   }
 
   /**
@@ -128,16 +120,17 @@ object SparkNaiveBayesModelCreator {
     val sqlContext = SQLContextSingleton.getInstance(sc)
     val tweetsDF = sqlContext.read
       .format("com.databricks.spark.csv")
-      .option("header", "false")
+      .option("header", "true")
       .option("inferSchema", "true")
       .load(filePath)
+
 
     /**
      * sentiment: -1, 0, 1 represent positive, neutral, negative
      * object: the target  or object the you are researching on, could be airline company, football team, etc.
      * text: tweet text
      */
-    tweetsDF.select("sentiment", "object", "text")
+    tweetsDF.select("sentiment",  "text")
   }
 
   /**
@@ -158,6 +151,6 @@ object SparkNaiveBayesModelCreator {
       // Compression codec to compress while saving to file.
       .option("codec", classOf[GzipCodec].getCanonicalName)
       .mode(SaveMode.Append)
-      .save(Constants.modelAccuracyPath)
+      //.save(Constants.modelAccuracyPath)
   }
 }
