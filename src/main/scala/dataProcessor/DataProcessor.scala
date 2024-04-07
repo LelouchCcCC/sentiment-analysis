@@ -13,7 +13,9 @@ object DataProcessor {
     val df = spark.read
       .option("header", "true")
       .option("inferSchema", "true")
+      .option("multiline", "true")
       .csv(path)
+
 
     val isValidDate = udf((date: String) => {
       val dateFormat = new SimpleDateFormat("MM/dd/yy HH:mm")
@@ -31,7 +33,16 @@ object DataProcessor {
     val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "MM/dd/yy HH:mm"))
     val finalDf = adjustedDf.na.drop()
     val res = changeTime(finalDf, spark)
-    res.show(20)
+      .withColumn("text", regexp_replace(col("text"), "\r?\n", " "))
+      .select("sentiment", "text")
+      .filter(col("text").isNotNull && col("sentiment").isNotNull)
+//    res.show(20)
+
+//    println("Filtered DataFrame count: " + filteredDf.count())
+//    println("Adjusted DataFrame count: " + adjustedDf.count())
+//    println("Final DataFrame count: " + finalDf.count())
+//    println("Result DataFrame count: " + res.count())
+
     res
   }
 

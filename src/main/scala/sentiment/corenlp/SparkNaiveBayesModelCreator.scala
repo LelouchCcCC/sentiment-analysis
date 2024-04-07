@@ -82,15 +82,16 @@ object SparkNaiveBayesModelCreator {
 
     //加载train用的data set
     val tweetsDF: DataFrame = loadData(createSparkSession(), trainFilePath).select("sentiment",  "text")
-
+    tweetsDF.printSchema()
     tweetsDF.show(20)
 
 
     val labeledRDD = tweetsDF.select("sentiment", "text").rdd
 
     val processedRDD = labeledRDD.flatMap {
-      case Row(sentiment: Int, tweet: String) =>
+      case Row(sentimentString: String, tweet: String) =>
         try {
+          val sentiment = sentimentString.toInt
           val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
           if (tweetInWords.nonEmpty) {
             Some(LabeledPoint(sentiment.toDouble, MLlibSentimentAnalyzer.transformFeatures(tweetInWords)))
