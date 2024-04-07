@@ -19,10 +19,9 @@ import utils.{Constants, SQLContextSingleton, StopwordsLoader}
  */
 
 object SparkNaiveBayesModelCreator {
-  val trainFile = Constants.TRAINING_CSV_FILE_NAME;
-  val testFile = Constants.TESTING_CSV_FILE_NAME;
-  val trainFilePath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/resources/data/airline.csv"
-  val testFilePath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/resources/data/airline.csv"
+
+  val trainFilePath = s"src/main/resources/data/${Constants.TRAINING_CSV_FILE_NAME}"
+  val testFilePath = s"src/main/resources/data/${Constants.TESTING_CSV_FILE_NAME}"
 
   def main(args: Array[String]) {
     val sc = createSparkContext()
