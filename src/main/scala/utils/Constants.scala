@@ -6,5 +6,5 @@ object Constants {
   val TESTING_SET_PATH = ""
   val TRAINING_CSV_FILE_NAME = "airline.csv"
   val TESTING_CSV_FILE_NAME = "airline.csv"
-  val naiveBayesModelPath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/scala/model"
+  val naiveBayesModelPath = "/src/main/scala/model"
 }
