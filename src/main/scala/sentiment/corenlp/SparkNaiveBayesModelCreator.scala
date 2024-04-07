@@ -1,6 +1,7 @@
 package sentiment.corenlp
 
 
+import dataProcessor.DataProcessor.loadData
 import org.apache.hadoop.io.compress.GzipCodec
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.classification.{NaiveBayes, NaiveBayesModel}
@@ -21,8 +22,8 @@ import utils.{Constants, SQLContextSingleton, StopwordsLoader}
 object SparkNaiveBayesModelCreator {
   val trainFile = Constants.TRAINING_CSV_FILE_NAME;
   val testFile = Constants.TESTING_CSV_FILE_NAME;
-  val trainFilePath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/resources/data/airline.csv"
-  val testFilePath = "/Users/yuxuan/Desktop/projects/sentiment-analysis/src/main/resources/data/airline.csv"
+  val trainFilePath = "src/main/resources/data/airline.csv"
+  val testFilePath = "src/main/resources/data/airline.csv"
 
   def main(args: Array[String]) {
     val sc = createSparkContext()
@@ -59,6 +60,19 @@ object SparkNaiveBayesModelCreator {
     sc
   }
 
+  def createSparkSession(): SparkSession = {
+    val spark: SparkSession = SparkSession
+      .builder()
+      .appName("AirlineAnalysis")
+      .config("spark.sql.legacy.timeParserPolicy", "LEGACY")
+      .master("local[*]") // Use local mode for development
+      .getOrCreate()
+
+    // Set log level to ERROR to reduce console output clutter
+    spark.sparkContext.setLogLevel("ERROR")
+    spark
+  }
+
   /**
    * Creates a Naive Bayes Model of Tweet and its Sentiment from the Sentiment140 file.
    *
@@ -66,19 +80,34 @@ object SparkNaiveBayesModelCreator {
    * @param stopWordsList -- Broadcast variable for list of stop words to be removed from the tweets.
    */
   def createAndSaveNBModel(sc: SparkContext, stopWordsList: Broadcast[List[String]]): Unit = {
-    //加载train用的data set
-    val tweetsDF: DataFrame = loadSentimentFile(sc, trainFilePath)
 
-    // 选择 `sentiment` 和 `text` 列，假设 `text` 列包含推文文本
-    val labeledRDD = tweetsDF.select("sentiment", "text").rdd.map {
+    //加载train用的data set
+    val tweetsDF: DataFrame = loadData(createSparkSession(), trainFilePath).select("sentiment",  "text")
+
+    tweetsDF.show(20)
+
+
+    val labeledRDD = tweetsDF.select("sentiment", "text").rdd
+
+    val processedRDD = labeledRDD.flatMap {
       case Row(sentiment: Int, tweet: String) =>
-        val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
-        LabeledPoint(sentiment.toDouble, MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
+        try {
+          val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
+          if (tweetInWords.nonEmpty) {
+            Some(LabeledPoint(sentiment.toDouble, MLlibSentimentAnalyzer.transformFeatures(tweetInWords)))
+          } else {
+            None
+          }
+        } catch {
+          case e: Exception => None
+        }
+      case _ => None
     }
-    labeledRDD.cache()
+
+    processedRDD.cache()
 
     // 训练朴素贝叶斯模型
-    val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(labeledRDD, lambda = 1.0, modelType = "multinomial")
+    val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(processedRDD, lambda = 1.0, modelType = "multinomial")
     naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
   }
 
@@ -91,7 +120,7 @@ object SparkNaiveBayesModelCreator {
   def validateAccuracyOfNBModel(sc: SparkContext, stopWordsList: Broadcast[List[String]]): Unit = {
     val naiveBayesModel: NaiveBayesModel = NaiveBayesModel.load(sc, Constants.naiveBayesModelPath)
 
-    val tweetsDF: DataFrame = loadSentimentFile(sc, testFilePath)
+    val tweetsDF: DataFrame = loadData(createSparkSession(), testFilePath)
     val actualVsPredictionRDD = tweetsDF.select("polarity", "status").rdd.map {
       case Row(polarity: Int, tweet: String) =>
         val tweetText = replaceNewLines(tweet)
@@ -109,29 +138,7 @@ object SparkNaiveBayesModelCreator {
     saveAccuracy(sc, actualVsPredictionRDD)
   }
 
-  /**
-   * Loads the Sentiment file from the specified path using SparkContext.
-   *
-   * @param sc                   -- Spark Context.
-   * @param filePath -- Absolute file path of Sentiment140.
-   * @return -- Spark DataFrame of the Sentiment file with the tweet text and its polarity.
-   */
-  def loadSentimentFile(sc: SparkContext, filePath: String): DataFrame = {
-    val sqlContext = SQLContextSingleton.getInstance(sc)
-    val tweetsDF = sqlContext.read
-      .format("com.databricks.spark.csv")
-      .option("header", "true")
-      .option("inferSchema", "true")
-      .load(filePath)
 
-
-    /**
-     * sentiment: -1, 0, 1 represent positive, neutral, negative
-     * object: the target  or object the you are researching on, could be airline company, football team, etc.
-     * text: tweet text
-     */
-    tweetsDF.select("sentiment",  "text")
-  }
 
   /**
    * Saves the accuracy computation of the ML library.

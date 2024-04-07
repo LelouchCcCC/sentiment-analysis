@@ -1,9 +1,11 @@
 package dataProcessor
-
-import org.apache.spark.sql.{DataFrame, SparkSession, functions => F}
+import org.apache.spark.sql.functions.{current_timestamp, date_add, datediff, max}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession, functions => F}
 import org.apache.spark.sql.functions._
 
+import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.{LocalDate, ZoneId}
 
 
 object DataProcessor {
@@ -14,7 +16,7 @@ object DataProcessor {
       .csv(path)
 
     val isValidDate = udf((date: String) => {
-      val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z")
+      val dateFormat = new SimpleDateFormat("MM/dd/yy HH:mm")
       dateFormat.setLenient(false)
       try {
         dateFormat.parse(date)
@@ -26,38 +28,29 @@ object DataProcessor {
 
     val filteredDf = df.filter(isValidDate(df("tweet_created")))
     import spark.implicits._
-    val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "yyyy-MM-dd HH:mm:ss Z"))
-    changeTime(adjustedDf,spark)
+    val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "MM/dd/yy HH:mm"))
+    val finalDf = adjustedDf.na.drop()
+    val res = changeTime(finalDf, spark)
+    res.show(20)
+    res
   }
 
-
-
-  // change some time
-
   def changeTime(df: DataFrame, spark: SparkSession): DataFrame = {
-    import spark.implicits._
+    df.createOrReplaceTempView("tweets")
 
-    // find max date
-    val maxDate = df.select(max($"tweet_created")).as[String].collect()(0)
+    // 获取昨天的日期
+    val yesterday = LocalDate.now(ZoneId.systemDefault()).minusDays(1)
 
-    if (maxDate != null) {
-      val maxDateTime = unix_timestamp(lit(maxDate), "yyyy-MM-dd HH:mm:ss").cast("timestamp")
+    // 使用 SQL 语句调整日期，保留时间不变
+    val query =
+      s"""
+      SELECT *,
+             to_timestamp(concat(date_format(to_date('$yesterday'), 'yyyy-MM-dd'), ' ', date_format(tweet_created, 'HH:mm:ss'))) as adjusted_tweet_created
+      FROM tweets
+    """
+    val adjustedDf = spark.sql(query)
 
-      // calculate yestoday
-      val yesterday = current_date().cast("timestamp")
-
-      val diff = datediff(yesterday, maxDateTime)
-
-      // process the time
-      df.withColumn("date", to_date($"tweet_created", "yyyy-MM-dd"))
-        .withColumn("time", date_format($"tweet_created", "HH:mm:ss"))
-        .withColumn("new_date", date_add($"date", diff))
-        .withColumn("new_tweet_created", concat_ws(" ", $"new_date", $"time"))
-        .drop("date", "time", "new_date", "tweet_created")
-        .withColumnRenamed("new_tweet_created", "tweet_created")
-    } else {
-      df
-    }
+    adjustedDf.drop("tweet_created").withColumnRenamed("adjusted_tweet_created", "tweet_created")
   }
 
 

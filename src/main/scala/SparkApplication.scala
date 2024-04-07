@@ -8,6 +8,7 @@ object SparkApplication extends App{
   val spark: SparkSession = SparkSession
     .builder()
     .appName("AirlineAnalysis")
+    .config("spark.sql.legacy.timeParserPolicy", "LEGACY")
     .master("local[*]") // Use local mode for development
     .getOrCreate()
 
