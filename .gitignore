@@ -11,3 +11,4 @@ local.env
 .bloop/
 .ammonite/
 metals.sbt
+src/main/.DS_Store
