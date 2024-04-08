@@ -12,3 +12,5 @@ local.env
 .ammonite/
 metals.sbt
 src/main/.DS_Store
+
+training.1600000.processed.noemoticon.csv
