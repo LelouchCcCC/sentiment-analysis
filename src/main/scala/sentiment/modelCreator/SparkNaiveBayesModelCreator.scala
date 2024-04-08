@@ -1,4 +1,4 @@
-package sentiment.corenlp
+package sentiment.modelCreator
 
 
 import dataProcessor.DataProcessor.loadData

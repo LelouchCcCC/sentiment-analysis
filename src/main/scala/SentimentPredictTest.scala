@@ -2,11 +2,11 @@ import dataProcessor.DataProcessor.loadData
 import org.apache.spark.sql.functions._
 import org.apache.spark.mllib.classification.NaiveBayesModel
 import org.apache.spark.sql.SparkSession
-import sentiment.corenlp.SparkNaiveBayesModelCreator.validateAccuracyOfNBModel
+import sentiment.modelCreator.SparkNaiveBayesModelCreator.validateAccuracyOfNBModel
 import sentiment.mllib.MLlibSentimentAnalyzer.computeSentiment
 import utils.{Constants, StopwordsLoader}
 
-object cnieo extends App{
+object SentimentPredictTest extends App{
   val spark: SparkSession = SparkSession
     .builder()
     .appName("AirlineAnalysis")

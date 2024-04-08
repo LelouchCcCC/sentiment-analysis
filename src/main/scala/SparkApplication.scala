@@ -3,6 +3,10 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import dataApi.DataApi
 
+/**
+ * Used to set up the back end server
+ */
+
 object SparkApplication extends App{
 
   val spark: SparkSession = SparkSession

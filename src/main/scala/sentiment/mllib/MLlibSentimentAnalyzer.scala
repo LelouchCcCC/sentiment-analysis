@@ -64,7 +64,6 @@ object MLlibSentimentAnalyzer {
   }
 
   val hashingTF = new HashingTF()
-
   /**
    * Transforms features to Vectors.
    *

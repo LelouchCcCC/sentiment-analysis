@@ -9,4 +9,16 @@ object DataApi {
       }
     }
 
+  path("home"){
+    get {
+      complete("This is home page.")
+    }
+  }
+
+  path("airline"){
+    get {
+      complete("This is airline page.")
+    }
+  }
+
 }
