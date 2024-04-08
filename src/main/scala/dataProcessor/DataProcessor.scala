@@ -28,22 +28,17 @@ object DataProcessor {
       }
     })
 
-    val filteredDf = df.filter(isValidDate(df("tweet_created")))
-    import spark.implicits._
-    val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "MM/dd/yy HH:mm"))
-    val finalDf = adjustedDf.na.drop()
-    val res = changeTime(finalDf, spark)
-      .withColumn("text", regexp_replace(col("text"), "\r?\n", " "))
-      .select("sentiment", "text")
-      .filter(col("text").isNotNull && col("sentiment").isNotNull)
-//    res.show(20)
+//    val filteredDf = df.filter(isValidDate(df("tweet_created")))
+//    import spark.implicits._
+//    val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "MM/dd/yy HH:mm"))
+//    val finalDf = adjustedDf.na.drop()
+//    val res = changeTime(finalDf, spark)
+//      .withColumn("text", regexp_replace(col("text"), "\r?\n", " "))
+//      .select("sentiment", "text")
+//      .filter(col("text").isNotNull && col("sentiment").isNotNull)
+//    res
+    df.na.drop()
 
-//    println("Filtered DataFrame count: " + filteredDf.count())
-//    println("Adjusted DataFrame count: " + adjustedDf.count())
-//    println("Final DataFrame count: " + finalDf.count())
-//    println("Result DataFrame count: " + res.count())
-
-    res
   }
 
   def changeTime(df: DataFrame, spark: SparkSession): DataFrame = {

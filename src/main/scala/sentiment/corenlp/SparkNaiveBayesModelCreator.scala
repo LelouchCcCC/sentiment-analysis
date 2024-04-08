@@ -11,6 +11,7 @@ import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql._
 import org.apache.spark.{SparkConf, SparkContext}
 import sentiment.mllib.MLlibSentimentAnalyzer
+import sentiment.mllib.MLlibSentimentAnalyzer.normalizeMLlibSentiment
 import utils.{Constants, SQLContextSingleton, StopwordsLoader}
 
 
@@ -21,8 +22,8 @@ import utils.{Constants, SQLContextSingleton, StopwordsLoader}
 
 object SparkNaiveBayesModelCreator {
 
-  val trainFilePath = s"src/main/resources/data/${Constants.TRAINING_CSV_FILE_NAME}"
-  val testFilePath = s"src/main/resources/data/${Constants.TESTING_CSV_FILE_NAME}"
+  val trainFilePath = s"src/main/resources/${Constants.TRAINING_CSV_FILE_NAME}"
+  val testFilePath = s"src/main/resources/${Constants.TESTING_CSV_FILE_NAME}"
 
   def main(args: Array[String]) {
     val sc = createSparkContext()
@@ -89,7 +90,7 @@ object SparkNaiveBayesModelCreator {
     val labeledRDD = tweetsDF.select("sentiment", "text").rdd
 
     val processedRDD = labeledRDD.flatMap {
-      case Row(sentimentString: String, tweet: String) =>
+      case Row(sentimentString: Int, tweet: String) =>
         try {
           val sentiment = sentimentString.toInt
           val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweet, stopWordsList.value)
@@ -121,12 +122,16 @@ object SparkNaiveBayesModelCreator {
     val naiveBayesModel: NaiveBayesModel = NaiveBayesModel.load(sc, Constants.naiveBayesModelPath)
 
     val tweetsDF: DataFrame = loadData(createSparkSession(), testFilePath)
-    val actualVsPredictionRDD = tweetsDF.select("polarity", "status").rdd.map {
-      case Row(polarity: Int, tweet: String) =>
+    val actualVsPredictionRDD = tweetsDF.select("sentiment", "text").rdd.map {
+      case Row(polarityStr: String, tweet: String) =>
+        val polarity = polarityStr.toDouble
         val tweetText = replaceNewLines(tweet)
         val tweetInWords: Seq[String] = MLlibSentimentAnalyzer.getBarebonesTweetText(tweetText, stopWordsList.value)
-        (polarity.toDouble,
-          naiveBayesModel.predict(MLlibSentimentAnalyzer.transformFeatures(tweetInWords)),
+        val predicted = naiveBayesModel.predict(MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
+//        println(polarity,predicted)
+        if (predicted==4.0) println(tweetText)
+        (polarity,
+          normalizeMLlibSentiment(predicted).toDouble,
           tweetText)
     }
     val accuracy = 100.0 * actualVsPredictionRDD.filter(x => x._1 == x._2).count() / tweetsDF.count()
