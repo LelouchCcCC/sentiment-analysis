@@ -25,18 +25,14 @@ object SentimentPredictTest extends App {
   // 加载模型
   val modelPath = Constants.naiveBayesModelPath
   val naiveBayesModel = NaiveBayesModel.load(sc, modelPath)
-  println(airlineData.show(300))
+//  println(airlineData.show(300))
   val filteredAirlineData = airlineData.filter(col("airline_sentiment").rlike("^(neutral|positive|negative)$"))
   val dropNAAirline = filteredAirlineData.na.drop()
-  println(dropNAAirline.show(30))
+//  println(dropNAAirline.show(30))
   val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
   val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
-  val text = "Thank you very much"
-
-  println(computeSentiment(text, stopWordsList, naiveBayesModel));
-
   modifiedDf.show(400)
-  println(modifiedDf.printSchema())
+//  println(modifiedDf.printSchema())
   // 创建一个新列，如果两列值相等，则该列值为1，否则为0
   val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
   val comparisonDf = dfWithInt.withColumn("is_equal", when(col("sentiment") === col("sentimentComputed"), 1).otherwise(0))

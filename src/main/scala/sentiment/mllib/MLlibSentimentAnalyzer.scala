@@ -17,7 +17,7 @@ object MLlibSentimentAnalyzer {
   def computeSentiment(text: String, stopWordsList: Broadcast[List[String]], model: NaiveBayesModel): Int = {
     val tweetInWords: Seq[String] = getBarebonesTweetText(text, stopWordsList.value)
     val polarity = model.predict(MLlibSentimentAnalyzer.transformFeatures(tweetInWords))
-    println(polarity)
+//    println(polarity)
     normalizeMLlibSentiment(polarity)
   }
 
