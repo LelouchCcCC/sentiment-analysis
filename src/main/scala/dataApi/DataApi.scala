@@ -1,24 +1,25 @@
 package dataApi
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-object DataApi {
+import dataProcessor.DataProcessor.retn_data
+import org.apache.spark.sql.SparkSession
+class DataApi(spark: SparkSession) {
   val route: Route =
-    path("test") {
+    path("home") {
+      println()
       get {
-        complete("This is a test route in DataApi object.")
+        val data = retn_data(spark)
+        complete(data)
       }
     }
 
-  path("home"){
-    get {
-      complete("This is home page.")
-    }
-  }
 
   path("airline"){
     get {
       complete("This is airline page.")
     }
   }
+
+
 
 }

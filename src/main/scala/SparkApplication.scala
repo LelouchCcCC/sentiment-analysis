@@ -23,10 +23,9 @@ object SparkApplication extends App{
   implicit val system: ActorSystem = ActorSystem("spark-application-system")
   implicit val executionContext = system.dispatcher
 
-  val bindingFuture = Http().newServerAt("localhost", 8080).bind(DataApi.route)
+  val dataApi = new DataApi(spark)
+  val bindingFuture = Http().newServerAt("localhost", 8080).bind(dataApi.route)
 
   println("Server online at http://localhost:8080/")
-
-
 
 }
