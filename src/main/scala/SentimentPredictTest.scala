@@ -67,4 +67,15 @@ object SentimentPredictTest extends App {
 
   // 显示结果，包括新增的差异度量列
   resultDf.show()
+
+  // 指定保存CSV文件的路径
+  val outputPath = "src/main/resources/output/average_sentiment_by_hour.csv"
+
+  // 将DataFrame保存为CSV
+  resultDf
+    .coalesce(1) // 这将所有数据合并到一个分区，从而生成一个CSV文件，但可能不适合大数据集
+    .write
+    .option("header", "true") // 包含列名作为CSV头部
+    .csv(outputPath)
+
 }
