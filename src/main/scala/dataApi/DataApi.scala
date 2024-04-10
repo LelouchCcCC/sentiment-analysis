@@ -5,7 +5,7 @@ import dataProcessor.DataProcessor.retn_data
 import org.apache.spark.sql.SparkSession
 class DataApi(spark: SparkSession) {
   val route: Route =
-    path("home") {
+    path("airline") {
       println()
       get {
         val data = retn_data(spark)
@@ -13,12 +13,12 @@ class DataApi(spark: SparkSession) {
       }
     }
 
-
-  path("airline"){
-    get {
-      complete("This is airline page.")
-    }
-  }
+//
+//  path("airline"){
+//    get {
+//      complete("This is airline page.")
+//    }
+//  }
 
 
 
