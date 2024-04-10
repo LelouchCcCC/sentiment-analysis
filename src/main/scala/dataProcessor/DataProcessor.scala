@@ -64,6 +64,7 @@ object DataProcessor {
   }
 
 
+  // this method is a copy to zzh method
   def retn_data(spark:SparkSession) = {
     val sc = spark.sparkContext
 
@@ -120,6 +121,18 @@ object DataProcessor {
     val jsonStrings = resultDf.toJSON.collect().mkString("[", ",", "]")
     jsonStrings
   }
+
+  def read_new_csv(spark:SparkSession) = {
+    val df = spark.read
+      .option("header", "true") // 假设第一行包含列名
+      .option("inferSchema", "true") // 推断数据类型
+      .csv(Constants.NEW_CSV_FILE_FOLDER)
+    df.show()
+    val jsonStrings = df.toJSON.collect().mkString("[", ",", "]")
+    jsonStrings
+
+  }
+
 
 
 }

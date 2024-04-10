@@ -1,14 +1,14 @@
 package dataApi
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import dataProcessor.DataProcessor.retn_data
+import dataProcessor.DataProcessor.{read_new_csv}
 import org.apache.spark.sql.SparkSession
 class DataApi(spark: SparkSession) {
   val route: Route =
     path("airline") {
       println()
       get {
-        val data = retn_data(spark)
+        val data = read_new_csv(spark)
         complete(data)
       }
     }
