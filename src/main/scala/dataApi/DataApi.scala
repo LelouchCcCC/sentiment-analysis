@@ -7,9 +7,15 @@ import org.apache.spark.mllib.classification.NaiveBayesModel
 import org.apache.spark.sql.SparkSession
 import utils.SentimentAnalyzer.singleAnalyze
 import utils.{Constants, SentimentAnalyzer, StopwordsLoader}
+import java.io.{BufferedWriter, File, FileWriter}
+import java.nio.file.{Files, Paths}
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import scala.jdk.CollectionConverters._
+
 
 class DataApi(spark: SparkSession) {
-
+  val dateTimeFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm")
   //  val corsSettings = CorsSettings.defaultSettings.withAllowedOrigins(HttpOriginRange.*)
 
   val route: Route = {
@@ -27,6 +33,8 @@ class DataApi(spark: SparkSession) {
             parameter("data"){ sentiment =>
               println(sentiment)
               val res = singleAnalyze(spark, sentiment).toString
+              val newLine = createNewCsvLine("src/main/resources/data/airline.csv", res, sentiment)
+              appendToCsv("src/main/resources/data/airline.csv", newLine)
               complete(res)
               // should respond with 这句话的好坏-1/0/1
               // 还要处理一下时间相关的东西，更新一下new_csv
@@ -48,6 +56,32 @@ class DataApi(spark: SparkSession) {
 //      }
     }
   }
+  def getLastLine(filePath: String): String = {
+    val lines = Files.readAllLines(Paths.get(filePath)).asScala
+    lines.last
+  }
 
+  def createNewCsvLine(filePath: String, sentiment: String, text: String): String = {
+    val lastLine = getLastLine(filePath)
+    val lastParts = lastLine.split(",")
+    val lastTimeStr = lastParts(5)
+    val lastTime = LocalDateTime.parse(lastTimeStr, dateTimeFormat).plusMinutes(2)
+    val newTimeStr = lastTime.format(dateTimeFormat)
+
+    // Assuming 'tweet_id' and 'airline_sentiment' are not provided
+    s",,$sentiment,,\"$text\",$newTimeStr"
+  }
+
+  def appendToCsv(filePath: String, newRow: String): Unit = {
+    val file = new File(filePath)
+    val writer = new BufferedWriter(new FileWriter(file, true))
+
+    try {
+      writer.newLine()
+      writer.write(newRow)
+    } finally {
+      writer.close()
+    }
+  }
 
 }
