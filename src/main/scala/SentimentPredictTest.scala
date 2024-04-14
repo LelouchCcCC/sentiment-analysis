@@ -76,6 +76,6 @@ object SentimentPredictTest extends App {
     .coalesce(1) // 这将所有数据合并到一个分区，从而生成一个CSV文件，但可能不适合大数据集
     .write
     .option("header", "true") // 包含列名作为CSV头部
+    .mode("overwrite")
     .csv(outputPath)
-
 }
