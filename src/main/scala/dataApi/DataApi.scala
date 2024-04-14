@@ -14,7 +14,7 @@ import scala.jdk.CollectionConverters._
 
 
 class DataApi(spark: SparkSession) {
-  val dateTimeFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm")
+  val dateTimeFormat = DateTimeFormatter.ofPattern("M/d/yy HH:mm")
   //  val corsSettings = CorsSettings.defaultSettings.withAllowedOrigins(HttpOriginRange.*)
 
   val route: Route = {
