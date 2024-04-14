@@ -13,12 +13,13 @@ class DataApi(spark: SparkSession) {
       }
     }
 
-//
-//  path("airline"){
-//    get {
-//      complete("This is airline page.")
-//    }
-//  }
+  path("oneSentiment") {
+    get {
+      val data = ???
+      complete(data)
+    }
+  }
+
 
 
 
