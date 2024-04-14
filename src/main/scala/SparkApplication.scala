@@ -1,8 +1,14 @@
 import org.apache.spark.sql.SparkSession
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.HttpMethods.{GET, POST}
+import akka.http.scaladsl.model.headers.HttpOriginRange
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.ExecutionDirectives._
+import ch.megard.akka.http.cors.javadsl.model.HttpOriginMatcher
+import scala.collection.JavaConverters._
+
+import ch.megard.akka.http.cors.javadsl.settings.CorsSettings
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import dataApi.DataApi
 
@@ -27,9 +33,8 @@ object SparkApplication extends App {
 
   // 封装你的路由以启用CORS
   val corsEnabledRoute = cors() {
-    dataApi.route
+    dataApi.route ~ dataApi.route2
   }
-
   val bindingFuture = Http().newServerAt("localhost", 8080).bind(corsEnabledRoute)
 
   println("Server online at http://localhost:8080/")
