@@ -32,7 +32,12 @@ object SentimentPredictTest extends App {
   //  println(dropNAAirline.show(30))
   val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
   val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
-  modifiedDf.show(400)
+  val totalRows = modifiedDf.count()
+  val lastRows = 10
+  val skip = totalRows - lastRows
+
+  val tailDf = modifiedDf.tail(lastRows)
+  tailDf.foreach(println)
   //  println(modifiedDf.printSchema())
   // 创建一个新列，如果两列值相等，则该列值为1，否则为0
   val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
@@ -58,7 +63,7 @@ object SentimentPredictTest extends App {
     .orderBy("hour")
 
   // 显示结果
-  averageSentimentByHour.show()
+  averageSentimentByHour.show(30)
 
   val resultDf = averageSentimentByHour
     .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
@@ -66,7 +71,7 @@ object SentimentPredictTest extends App {
 
 
   // 显示结果，包括新增的差异度量列
-  resultDf.show()
+  resultDf.show(30)
 
   // 指定保存CSV文件的路径
   val outputPath = "src/main/resources/output/average_sentiment_by_hour.csv"

@@ -2,16 +2,18 @@ package dataApi
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import dataProcessor.DataProcessor.read_new_csv
+import dataProcessor.DataProcessor.{read_new_csv, update_summary_csv}
 import org.apache.spark.sql.SparkSession
-import scala.util.Random
 
+import scala.util.Random
 import utils.SentimentAnalyzer.singleAnalyze
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 
 
@@ -31,14 +33,19 @@ class DataApi(spark: SparkSession) {
   val route2: Route = {
     path("oneSentiment") {
       get
-      parameter("data") { sentiment =>
-        println(sentiment)
+      parameter("data") { sentiment_with_comma =>
+        println(sentiment_with_comma)
+        val sentiment = sentiment_with_comma.replace(',','.')
         val res = singleAnalyze(spark, sentiment).toString
         val newLine = createNewCsvLine("src/main/resources/data/airline.csv", res, sentiment)
         appendToCsv("src/main/resources/data/airline.csv", newLine)
+
+        // use Future to compute the update of hourly data
+        Future {
+          update_summary_csv(spark)
+        }
         complete(res)
-        // should respond with 这句话的好坏-1/0/1
-        // 还要处理一下时间相关的东西，更新一下new_csv
+        // should respond with -1/0/1
       }
 
 

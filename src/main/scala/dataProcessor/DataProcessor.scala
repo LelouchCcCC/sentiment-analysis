@@ -82,7 +82,7 @@ object DataProcessor {
     //  println(dropNAAirline.show(30))
     val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
     val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
-    modifiedDf.show(400)
+    modifiedDf.show(-400)
     //  println(modifiedDf.printSchema())
     // 创建一个新列，如果两列值相等，则该列值为1，否则为0
     val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
@@ -131,6 +131,66 @@ object DataProcessor {
     val jsonStrings = df.toJSON.collect().mkString("[", ",", "]")
     jsonStrings
 
+  }
+
+  def update_summary_csv(spark:SparkSession) = {
+    val sc = spark.sparkContext
+
+    // read stop_words
+    val stopWordsList = sc.broadcast(StopwordsLoader.loadStopWords(Constants.STOP_WORDS))
+
+    val airlineData = spark.read.option("inferSchema", "true").option("header", "true").csv("src/main/resources/data/airline.csv")
+
+    // load the model
+    val modelPath = Constants.naiveBayesModelPath
+    val naiveBayesModel = NaiveBayesModel.load(sc, modelPath)
+    //  println(airlineData.show(300))
+    val filteredAirlineData = airlineData.filter(col("airline_sentiment").rlike("^(neutral|positive|negative)$"))
+    val dropNAAirline = filteredAirlineData.na.drop()
+    //  println(dropNAAirline.show(30))
+    val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
+    val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
+    modifiedDf.show(400)
+    //  println(modifiedDf.printSchema())
+    // create a new column, if the two columns are the same, put 1 in there else 0
+    val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
+    val comparisonDf = dfWithInt.withColumn("is_equal", when(col("sentiment") === col("sentimentComputed"), 1).otherwise(0))
+
+    // calculate the accuracy
+    val accuracy = comparisonDf.agg(sum("is_equal").cast("double") / count("is_equal")).first().get(0).asInstanceOf[Double]
+
+    println(s"Accuracy: $accuracy")
+
+    // convert date type of tweet_created
+    val dfWithTimestamp = comparisonDf.withColumn("tweet_timestamp", unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType))
+
+    // get the hour, as we do the group analysisgroup
+    val dfWithHour = dfWithTimestamp.withColumn("hour", hour(col("tweet_timestamp")))
+    val averageSentimentByHour = dfWithHour.groupBy("hour")
+      .agg(
+        round(avg("sentiment"), 2).alias("average_sentiment"),
+        round(avg("sentimentComputed"), 2).alias("average_sentiment_computed")
+      )
+      .orderBy("hour")
+
+    averageSentimentByHour.show()
+
+    val resultDf = averageSentimentByHour
+      .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
+      .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
+
+    resultDf.show()
+
+    // path to new csv
+    val outputPath = "src/main/resources/output/average_sentiment_by_hour.csv"
+
+    // save the trained data
+    resultDf
+      .coalesce(1)
+      .write
+      .option("header", "true")
+      .mode("overwrite")
+      .csv(outputPath)
   }
 
 
