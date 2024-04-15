@@ -4,6 +4,8 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import dataProcessor.DataProcessor.read_new_csv
 import org.apache.spark.sql.SparkSession
+import scala.util.Random
+
 import utils.SentimentAnalyzer.singleAnalyze
 
 import java.io.{BufferedWriter, File, FileWriter}
@@ -65,11 +67,18 @@ class DataApi(spark: SparkSession) {
     val lastLine = getLastLine(filePath)
     val lastParts = lastLine.split(",")
     val lastTimeStr = lastParts(5)
+    val random = new Random()
+    val randomUser = random.nextInt()
     val lastTime = LocalDateTime.parse(lastTimeStr, dateTimeFormat).plusMinutes(2)
     val newTimeStr = lastTime.format(dateTimeFormat)
+    val airline_sentiment = sentiment match {
+      case "-1" => "negative"
+      case "0" => "neutral"
+      case "1" => "positive"
+    }
 
     // Assuming 'tweet_id' and 'airline_sentiment' are not provided
-    s",,$sentiment,,\"$text\",$newTimeStr"
+    s"$randomUser,$airline_sentiment,$sentiment,American,\"$text\",$newTimeStr"
   }
 
   def appendToCsv(filePath: String, newRow: String): Unit = {
