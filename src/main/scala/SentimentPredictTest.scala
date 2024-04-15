@@ -36,6 +36,7 @@ object SentimentPredictTest extends App {
   val lastRows = 10
   val skip = totalRows - lastRows
 
+  println(s"Total counts: $totalRows")
   val tailDf = modifiedDf.tail(lastRows)
   tailDf.foreach(println)
   //  println(modifiedDf.printSchema())
@@ -49,25 +50,54 @@ object SentimentPredictTest extends App {
   println(s"Accuracy: $accuracy")
 
   // 将tweet_created转换为日期时间类型
-  val dfWithTimestamp = comparisonDf.withColumn("tweet_timestamp", unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType))
+  val dfWithTimestamp = comparisonDf.withColumn(
+    "tweet_timestamp",
+    unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType)
+  )
 
   // 提取小时
   val dfWithHour = dfWithTimestamp.withColumn("hour", hour(col("tweet_timestamp")))
+  val dfWithDateHour = dfWithTimestamp.withColumn(
+    "date",
+    date_format(col("tweet_timestamp"), "yyyy-MM-dd")
+  ).withColumn(
+    "hour",
+    hour(col("tweet_timestamp"))
+  )
 
   // 按小时分组并计算sentiment和sentimentComputed的平均值
-  val averageSentimentByHour = dfWithHour.groupBy("hour")
+//  val averageSentimentByHour = dfWithHour.groupBy("hour")
+//    .agg(
+//      round(avg("sentiment"), 2).alias("average_sentiment"),
+//      round(avg("sentimentComputed"), 2).alias("average_sentiment_computed")
+//    )
+//    .orderBy("hour")
+
+//  val averageSentimentByHour = dfWithHour.groupBy("hour")
+//    .agg(
+//      avg("sentiment").alias("average_sentiment"),
+//      avg("sentimentComputed").alias("average_sentiment_computed")
+//    )
+//    .orderBy("hour")
+
+  val averageSentimentByDateHour = dfWithDateHour.groupBy("date", "hour")
     .agg(
-      round(avg("sentiment"), 2).alias("average_sentiment"),
-      round(avg("sentimentComputed"), 2).alias("average_sentiment_computed")
+      count("*").alias("count"),
+      round(avg("sentiment"),2).alias("average_sentiment"),
+      round(avg("sentimentComputed"),2).alias("average_sentiment_computed")
     )
-    .orderBy("hour")
+    .orderBy("date", "hour")
 
   // 显示结果
-  averageSentimentByHour.show(30)
+  averageSentimentByDateHour.show(30)
 
-  val resultDf = averageSentimentByHour
+  val resultDf = averageSentimentByDateHour
     .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
     .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
+
+//  val resultDf = averageSentimentByDateHour
+//    .withColumn("abs_difference", abs(col("average_sentiment") - col("average_sentiment_computed")))
+//    .withColumn("squared_difference", pow(col("average_sentiment") - col("average_sentiment_computed"), 2))
 
 
   // 显示结果，包括新增的差异度量列
