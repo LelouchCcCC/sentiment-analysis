@@ -150,8 +150,13 @@ object DataProcessor {
     //  println(dropNAAirline.show(30))
     val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
     val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
-    modifiedDf.show(400)
-    //  println(modifiedDf.printSchema())
+    val totalRows = modifiedDf.count()
+    val lastRows = 10
+    val skip = totalRows - lastRows
+
+    println(s"Total counts: $totalRows")
+    val tailDf = modifiedDf.tail(lastRows)
+    tailDf.foreach(println)
     // create a new column, if the two columns are the same, put 1 in there else 0
     val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
     val comparisonDf = dfWithInt.withColumn("is_equal", when(col("sentiment") === col("sentimentComputed"), 1).otherwise(0))
@@ -162,37 +167,52 @@ object DataProcessor {
     println(s"Accuracy: $accuracy")
 
     // convert date type of tweet_created
-    val dfWithTimestamp = comparisonDf.withColumn("tweet_timestamp", unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType))
-
+    val dfWithTimestamp = comparisonDf.withColumn(
+      "tweet_timestamp",
+      unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType)
+    )
     // get the hour, as we do the group analysisgroup
     val dfWithHour = dfWithTimestamp.withColumn("hour", hour(col("tweet_timestamp")))
-    val averageSentimentByHour = dfWithHour.groupBy("hour")
+    val dfWithDateHour = dfWithTimestamp.withColumn(
+      "date",
+      date_format(col("tweet_timestamp"), "yyyy-MM-dd")
+    ).withColumn(
+      "hour",
+      hour(col("tweet_timestamp"))
+    )
+
+    val averageSentimentByDateHour = dfWithDateHour.groupBy("date", "hour")
       .agg(
+        count("*").alias("count"),
         round(avg("sentiment"), 2).alias("average_sentiment"),
         round(avg("sentimentComputed"), 2).alias("average_sentiment_computed")
       )
-      .orderBy("hour")
+      .orderBy("date", "hour")
 
-    averageSentimentByHour.show()
+    // 显示结果
+    averageSentimentByDateHour.show(30)
 
-    val resultDf = averageSentimentByHour
+    val resultDf = averageSentimentByDateHour
       .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
       .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
 
-    resultDf.show()
+    //  val resultDf = averageSentimentByDateHour
+    //    .withColumn("abs_difference", abs(col("average_sentiment") - col("average_sentiment_computed")))
+    //    .withColumn("squared_difference", pow(col("average_sentiment") - col("average_sentiment_computed"), 2))
 
-    // path to new csv
+
+    // 显示结果，包括新增的差异度量列
+    resultDf.show(30)
+
+    // 指定保存CSV文件的路径
     val outputPath = "src/main/resources/output/average_sentiment_by_hour.csv"
 
-    // save the trained data
+    // 将DataFrame保存为CSV
     resultDf
-      .coalesce(1)
+      .coalesce(1) // 这将所有数据合并到一个分区，从而生成一个CSV文件，但可能不适合大数据集
       .write
-      .option("header", "true")
+      .option("header", "true") // 包含列名作为CSV头部
       .mode("overwrite")
       .csv(outputPath)
   }
-
-
-
 }

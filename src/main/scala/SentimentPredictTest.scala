@@ -77,7 +77,20 @@ object SentimentPredictTest extends App {
 //    .agg(
 //      avg("sentiment").alias("average_sentiment"),
 //      avg("sentimentComputed").alias("average_sentiment_computed")
-//    )
+//    )val averageSentimentByDateHour = dfWithDateHour.groupBy("date", "hour")
+  //    .agg(
+  //      count("*").alias("count"),
+  //      round(avg("sentiment"),2).alias("average_sentiment"),
+  //      round(avg("sentimentComputed"),2).alias("average_sentiment_computed")
+  //    )
+  //    .orderBy("date", "hour")
+  //
+  //  // 显示结果
+  //  averageSentimentByDateHour.show(30)
+  //
+  //  val resultDf = averageSentimentByDateHour
+  //    .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
+  //    .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
 //    .orderBy("hour")
 
   val averageSentimentByDateHour = dfWithDateHour.groupBy("date", "hour")
