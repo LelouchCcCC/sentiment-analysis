@@ -21,13 +21,6 @@ object MLlibSentimentAnalyzer {
     normalizeMLlibSentiment(polarity)
   }
 
-  /**
-   * Normalize sentiment for visualization perspective.
-   * We are normalizing sentiment as we need to be consistent with the polarity value with Core NLP and for visualization.
-   *
-   * @param sentiment polarity of the tweet
-   * @return normalized to either -1, 0 or 1 based on tweet being negative, neutral and positive.
-   */
   def normalizeMLlibSentiment(sentiment: Double) = {
     sentiment match {
       case x if x == 0 => -1 // negative
@@ -37,13 +30,6 @@ object MLlibSentimentAnalyzer {
     }
   }
 
-  /**
-   * Strips the extra characters in tweets. And also removes stop words from the tweet text.
-   *
-   * @param tweetText     -- Complete text of a tweet.
-   * @param stopWordsList -- Broadcast variable for list of stop words to be removed from the tweets.
-   * @return Seq[String] after removing additional characters and stop words from the tweet.
-   */
   def getBarebonesTweetText(tweetText: String, stopWordsList: List[String]): Seq[String] = {
     //Remove URLs, RT, MT and other redundant chars / strings from the tweets.
     tweetText.toLowerCase()
@@ -64,12 +50,6 @@ object MLlibSentimentAnalyzer {
   }
 
   val hashingTF = new HashingTF()
-  /**
-   * Transforms features to Vectors.
-   *
-   * @param tweetText -- Complete text of a tweet.
-   * @return Vector
-   */
   def transformFeatures(tweetText: Seq[String]): Vector = {
     hashingTF.transform(tweetText)
   }

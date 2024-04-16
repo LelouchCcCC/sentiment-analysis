@@ -34,23 +34,10 @@ object SparkNaiveBayesModelCreator {
     createAndSaveNBModel(sc, stopWordsList)
     //validateAccuracyOfNBModel(sc, stopWordsList)
   }
-
-  /**
-   * Remove new line characters.
-   *
-   * @param tweetText -- Complete text of a tweet.
-   * @return String with new lines removed.
-   */
   def replaceNewLines(tweetText: String): String = {
     tweetText.replaceAll("\n", "")
   }
 
-  /**
-   * Create SparkContext.
-   * Future extension: enable checkpointing to HDFS [is it really reqd??].
-   *
-   * @return SparkContext
-   */
   def createSparkContext(): SparkContext = {
     val conf = new SparkConf()
       .setAppName(this.getClass.getSimpleName)
@@ -112,12 +99,6 @@ object SparkNaiveBayesModelCreator {
     naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
   }
 
-  /**
-   * Validates and check the accuracy of the model by comparing the polarity of a tweet from the dataset and compares it with the MLlib predicted polarity.
-   *
-   * @param sc            -- Spark Context.
-   * @param stopWordsList -- Broadcast variable for list of stop words to be removed from the tweets.
-   */
   def validateAccuracyOfNBModel(sc: SparkContext, stopWordsList: Broadcast[List[String]]): Unit = {
     val naiveBayesModel: NaiveBayesModel = NaiveBayesModel.load(sc, Constants.naiveBayesModelPath)
 
@@ -145,13 +126,6 @@ object SparkNaiveBayesModelCreator {
 
 
 
-  /**
-   * Saves the accuracy computation of the ML library.
-   * The columns are actual polarity as per the dataset, computed polarity with MLlib and the tweet text.
-   *
-   * @param sc                    -- Spark Context.
-   * @param actualVsPredictionRDD -- RDD of polarity of a tweet in dataset and MLlib computed polarity.
-   */
   def saveAccuracy(sc: SparkContext, actualVsPredictionRDD: RDD[(Double, Double, String)]): Unit = {
     val sqlContext = SQLContextSingleton.getInstance(sc)
     import sqlContext.implicits._
