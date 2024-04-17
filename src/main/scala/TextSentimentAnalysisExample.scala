@@ -36,7 +36,7 @@ object TextSentimentAnalysisExample {
     // show result
     analyzedDF.show()
 
-    // 保存结果，更改为实际路径
+    // store result
     analyzedDF.write
       .option("header", "true")
       .csv("path/to/result.csv")
