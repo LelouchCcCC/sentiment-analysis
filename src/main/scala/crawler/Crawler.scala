@@ -1,5 +1,0 @@
-package crawler
-
-object Crawler {
-
-}

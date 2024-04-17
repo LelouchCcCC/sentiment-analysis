@@ -70,9 +70,6 @@ object SparkNaiveBayesModelCreator {
 
     //加载train用的data set
     val tweetsDF: DataFrame = loadData(createSparkSession(), trainFilePath).select("sentiment",  "text")
-    tweetsDF.printSchema()
-    tweetsDF.show(20)
-
 
     val labeledRDD = tweetsDF.select("sentiment", "text").rdd
 
@@ -94,7 +91,6 @@ object SparkNaiveBayesModelCreator {
 
     processedRDD.cache()
 
-    // 训练朴素贝叶斯模型
     val naiveBayesModel: NaiveBayesModel = NaiveBayes.train(processedRDD, lambda = 1.0, modelType = "multinomial")
     naiveBayesModel.save(sc, Constants.naiveBayesModelPath)
   }
