@@ -38,24 +38,24 @@ object SentimentPredictTest extends App {
 
   println(s"Total counts: $totalRows")
   val tailDf = modifiedDf.tail(lastRows)
-  tailDf.foreach(println)
-  //  println(modifiedDf.printSchema())
-  // 创建一个新列，如果两列值相等，则该列值为1，否则为0
+  //tailDf.foreach(println)
+
+  // create a new column, if two columns share the same value, the new value is 1, else 0
   val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
   val comparisonDf = dfWithInt.withColumn("is_equal", when(col("sentiment") === col("sentimentComputed"), 1).otherwise(0))
 
-  // 计算准确率
+  // calculate accuracy
   val accuracy = comparisonDf.agg(sum("is_equal").cast("double") / count("is_equal")).first().get(0).asInstanceOf[Double]
 
   println(s"Accuracy: $accuracy")
 
-  // 将tweet_created转换为日期时间类型
+  // transform tweet_created to date
   val dfWithTimestamp = comparisonDf.withColumn(
     "tweet_timestamp",
     unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType)
   )
 
-  // 提取小时
+  // extract the hours
   val dfWithHour = dfWithTimestamp.withColumn("hour", hour(col("tweet_timestamp")))
   val dfWithDateHour = dfWithTimestamp.withColumn(
     "date",
@@ -65,34 +65,6 @@ object SentimentPredictTest extends App {
     hour(col("tweet_timestamp"))
   )
 
-  // 按小时分组并计算sentiment和sentimentComputed的平均值
-//  val averageSentimentByHour = dfWithHour.groupBy("hour")
-//    .agg(
-//      round(avg("sentiment"), 2).alias("average_sentiment"),
-//      round(avg("sentimentComputed"), 2).alias("average_sentiment_computed")
-//    )
-//    .orderBy("hour")
-
-//  val averageSentimentByHour = dfWithHour.groupBy("hour")
-//    .agg(
-//      avg("sentiment").alias("average_sentiment"),
-//      avg("sentimentComputed").alias("average_sentiment_computed")
-//    )val averageSentimentByDateHour = dfWithDateHour.groupBy("date", "hour")
-  //    .agg(
-  //      count("*").alias("count"),
-  //      round(avg("sentiment"),2).alias("average_sentiment"),
-  //      round(avg("sentimentComputed"),2).alias("average_sentiment_computed")
-  //    )
-  //    .orderBy("date", "hour")
-  //
-  //  // 显示结果
-  //  averageSentimentByDateHour.show(30)
-  //
-  //  val resultDf = averageSentimentByDateHour
-  //    .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
-  //    .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
-//    .orderBy("hour")
-
   val averageSentimentByDateHour = dfWithDateHour.groupBy("date", "hour")
     .agg(
       count("*").alias("count"),
@@ -101,29 +73,22 @@ object SentimentPredictTest extends App {
     )
     .orderBy("date", "hour")
 
-  // 显示结果
+  // show result
   averageSentimentByDateHour.show(30)
 
   val resultDf = averageSentimentByDateHour
     .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
     .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
 
-//  val resultDf = averageSentimentByDateHour
-//    .withColumn("abs_difference", abs(col("average_sentiment") - col("average_sentiment_computed")))
-//    .withColumn("squared_difference", pow(col("average_sentiment") - col("average_sentiment_computed"), 2))
-
-
-  // 显示结果，包括新增的差异度量列
   resultDf.show(30)
 
-  // 指定保存CSV文件的路径
   val outputPath = "src/main/resources/output/average_sentiment_by_hour.csv"
 
-  // 将DataFrame保存为CSV
+  // store as csv
   resultDf
-    .coalesce(1) // 这将所有数据合并到一个分区，从而生成一个CSV文件，但可能不适合大数据集
+    .coalesce(1)
     .write
-    .option("header", "true") // 包含列名作为CSV头部
+    .option("header", "true")
     .mode("overwrite")
     .csv(outputPath)
 }
