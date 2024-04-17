@@ -1,4 +1,4 @@
-# RSSE: Real-Time Sentiment Evaluation
+# RSSE: Real-Time Social Media Sentiment Analysis Engine
 
 ## Project Overview
 
