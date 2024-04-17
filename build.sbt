@@ -20,8 +20,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % "2.9.2",
   "com.typesafe" %% "ssl-config-core" % "0.6.1",
   "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.10",
-"com.typesafe.akka" %% "akka-http-testkit" % "10.2.10" % "Test",
-"com.typesafe.akka" %% "akka-stream-testkit" % "2.9.2" % "Test",
+  "com.typesafe.akka" %% "akka-http-testkit" % "10.2.10" % "Test",
+  "com.typesafe.akka" %% "akka-stream-testkit" % "2.9.2" % "Test",
+  "org.scalactic" %% "scalactic" % "3.2.18",
+  "org.scalatest" %% "scalatest" % "3.2.18" % "test",
+  "com.holdenkarau" %% "spark-testing-base" % "3.4.2_1.5.2" % Test
 )
 
 

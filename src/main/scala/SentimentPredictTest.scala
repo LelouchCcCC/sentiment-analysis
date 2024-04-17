@@ -34,7 +34,8 @@ object SentimentPredictTest extends App {
 
     val airlineData = loadData(spark)
     val sentimentData = computeSentimentAnalysis(airlineData, stopWordsList, naiveBayesModel)
-    calculateAccuracy(sentimentData)
+    val accuracy = calculateAccuracy(sentimentData)
+    println(s"Accuracy: $accuracy")
     val analysisResults = performAnalysis(sentimentData)
     analysisResults.show(30)
     saveResults(analysisResults, Constants.NEW_CSV_FILE_FOLDER)
@@ -54,10 +55,9 @@ object SentimentPredictTest extends App {
       .withColumn("is_equal", when(col("sentiment") === col("sentimentComputed"), 1).otherwise(0))
   }
 
-  def calculateAccuracy(df: DataFrame): Unit = {
+  def calculateAccuracy(df: DataFrame): Double = {
     val accuracyResult = df.agg((sum("is_equal").cast("double") / count("is_equal")).alias("accuracy")).first()
-    val accuracy = accuracyResult.getAs[Double]("accuracy")
-    println(s"Accuracy: $accuracy")
+    accuracyResult.getAs[Double]("accuracy")
   }
 
   def performAnalysis(df: DataFrame): DataFrame = {
