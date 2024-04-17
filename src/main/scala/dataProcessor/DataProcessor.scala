@@ -32,15 +32,6 @@ object DataProcessor {
       }
     })
 
-//    val filteredDf = df.filter(isValidDate(df("tweet_created")))
-//    import spark.implicits._
-//    val adjustedDf = filteredDf.withColumn("tweet_created", to_timestamp($"tweet_created", "MM/dd/yy HH:mm"))
-//    val finalDf = adjustedDf.na.drop()
-//    val res = changeTime(finalDf, spark)
-//      .withColumn("text", regexp_replace(col("text"), "\r?\n", " "))
-//      .select("sentiment", "text")
-//      .filter(col("text").isNotNull && col("sentiment").isNotNull)
-//    res
     df.na.drop()
 
   }
@@ -48,10 +39,10 @@ object DataProcessor {
   def changeTime(df: DataFrame, spark: SparkSession): DataFrame = {
     df.createOrReplaceTempView("tweets")
 
-    // 获取昨天的日期
+    // get the date of yesterday
     val yesterday = LocalDate.now(ZoneId.systemDefault()).minusDays(1)
 
-    // 使用 SQL 语句调整日期，保留时间不变
+    // adjust the date
     val query =
       s"""
       SELECT *,
@@ -68,38 +59,36 @@ object DataProcessor {
   def retn_data(spark:SparkSession) = {
     val sc = spark.sparkContext
 
-    // 用于广播停用词列表
+    // load stop words
     val stopWordsList = sc.broadcast(StopwordsLoader.loadStopWords(Constants.STOP_WORDS))
 
     val airlineData = spark.read.option("inferSchema", "true").option("header", "true").csv("src/main/resources/data/airline.csv")
 
-    // 加载模型
+    // load model
     val modelPath = Constants.naiveBayesModelPath
     val naiveBayesModel = NaiveBayesModel.load(sc, modelPath)
-    //  println(airlineData.show(300))
+
     val filteredAirlineData = airlineData.filter(col("airline_sentiment").rlike("^(neutral|positive|negative)$"))
     val dropNAAirline = filteredAirlineData.na.drop()
-    //  println(dropNAAirline.show(30))
+
     val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
     val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
     modifiedDf.show(-400)
-    //  println(modifiedDf.printSchema())
-    // 创建一个新列，如果两列值相等，则该列值为1，否则为0
+
     val dfWithInt = modifiedDf.withColumn("sentiment", col("sentiment").cast("int"))
     val comparisonDf = dfWithInt.withColumn("is_equal", when(col("sentiment") === col("sentimentComputed"), 1).otherwise(0))
 
-    // 计算准确率
     val accuracy = comparisonDf.agg(sum("is_equal").cast("double") / count("is_equal")).first().get(0).asInstanceOf[Double]
 
     println(s"Accuracy: $accuracy")
 
-    // 将tweet_created转换为日期时间类型
+    // change tweet_created into date type
     val dfWithTimestamp = comparisonDf.withColumn("tweet_timestamp", unix_timestamp(col("tweet_created"), "M/d/yy H:mm").cast(TimestampType))
 
-    // 提取小时
+    // extract the hour
     val dfWithHour = dfWithTimestamp.withColumn("hour", hour(col("tweet_timestamp")))
 
-    // 按小时分组并计算sentiment和sentimentComputed的平均值
+    // group by hour and calculate the avg of sentiment values and computed sentiment values
     val averageSentimentByHour = dfWithHour.groupBy("hour")
       .agg(
         round(avg("sentiment"), 2).alias("average_sentiment"),
@@ -107,7 +96,7 @@ object DataProcessor {
       )
       .orderBy("hour")
 
-    // 显示结果
+    // show result
     averageSentimentByHour.show()
 
     val resultDf = averageSentimentByHour
@@ -115,7 +104,6 @@ object DataProcessor {
       .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
 
 
-    // 显示结果，包括新增的差异度量列
     resultDf.show()
 
     val jsonStrings = resultDf.toJSON.collect().mkString("[", ",", "]")
@@ -124,8 +112,8 @@ object DataProcessor {
 
   def read_new_csv(spark:SparkSession) = {
     val df = spark.read
-      .option("header", "true") // 假设第一行包含列名
-      .option("inferSchema", "true") // 推断数据类型
+      .option("header", "true")
+      .option("inferSchema", "true")
       .csv(Constants.NEW_CSV_FILE_FOLDER)
     df.show()
     val jsonStrings = df.toJSON.collect().mkString("[", ",", "]")
@@ -144,10 +132,10 @@ object DataProcessor {
     // load the model
     val modelPath = Constants.naiveBayesModelPath
     val naiveBayesModel = NaiveBayesModel.load(sc, modelPath)
-    //  println(airlineData.show(300))
+
     val filteredAirlineData = airlineData.filter(col("airline_sentiment").rlike("^(neutral|positive|negative)$"))
     val dropNAAirline = filteredAirlineData.na.drop()
-    //  println(dropNAAirline.show(30))
+
     val processText = udf((s: String) => computeSentiment(s, stopWordsList, naiveBayesModel))
     val modifiedDf = dropNAAirline.withColumn("sentimentComputed", processText(col("text")))
     val totalRows = modifiedDf.count()
@@ -189,29 +177,23 @@ object DataProcessor {
       )
       .orderBy("date", "hour")
 
-    // 显示结果
+    // show result
     averageSentimentByDateHour.show(30)
 
     val resultDf = averageSentimentByDateHour
       .withColumn("abs_difference", round(abs(col("average_sentiment") - col("average_sentiment_computed")), 2))
       .withColumn("squared_difference", round(pow(col("average_sentiment") - col("average_sentiment_computed"), 2), 2))
 
-    //  val resultDf = averageSentimentByDateHour
-    //    .withColumn("abs_difference", abs(col("average_sentiment") - col("average_sentiment_computed")))
-    //    .withColumn("squared_difference", pow(col("average_sentiment") - col("average_sentiment_computed"), 2))
 
-
-    // 显示结果，包括新增的差异度量列
     resultDf.show(30)
 
-    // 指定保存CSV文件的路径
     val outputPath = "src/main/resources/output/average_sentiment_by_hour.csv"
 
-    // 将DataFrame保存为CSV
+    // store dataframe as csv
     resultDf
-      .coalesce(1) // 这将所有数据合并到一个分区，从而生成一个CSV文件，但可能不适合大数据集
+      .coalesce(1)
       .write
-      .option("header", "true") // 包含列名作为CSV头部
+      .option("header", "true") 
       .mode("overwrite")
       .csv(outputPath)
   }
