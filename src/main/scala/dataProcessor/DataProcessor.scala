@@ -193,7 +193,7 @@ object DataProcessor {
     resultDf
       .coalesce(1)
       .write
-      .option("header", "true") 
+      .option("header", "true")
       .mode("overwrite")
       .csv(outputPath)
   }

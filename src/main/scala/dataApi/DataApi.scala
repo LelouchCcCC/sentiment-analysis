@@ -47,21 +47,6 @@ class DataApi(spark: SparkSession) {
         complete(res)
         // should respond with -1/0/1
       }
-
-
-      //      get {
-      //        parameter("data") { sentimentData =>
-      //          println(s"Received sentiment data: $sentimentData")
-      //          // 这里调用您的情感分析逻辑
-      //          val res = analyzeSentiment(sentimentData)
-      //
-      //          // 处理CSV更新操作，如果需要的话
-      //          updateCsvIfNeeded(spark)
-      //
-      //          // 根据分析结果返回响应
-      //          complete(StatusCodes.OK, s"情感分析结果: $res")
-      //        }
-      //      }
     }
   }
 
