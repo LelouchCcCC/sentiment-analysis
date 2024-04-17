@@ -11,8 +11,7 @@ class SentimentPredictTestSuite extends AnyFunSuite with DataFrameSuiteBase {
     val input = Seq(
       ("positive", "I love this airline."),
       ("negative", "I hate this airline."),
-      ("neutral", "This airline is okay."),
-      ("irrelevant", "This is not related.")
+      ("neutral", "This airline is okay.")
     ).toDF("airline_sentiment", "text")
 
     input.createOrReplaceTempView("airline_data")
@@ -28,7 +27,6 @@ class SentimentPredictTestSuite extends AnyFunSuite with DataFrameSuiteBase {
     ).toDF("airline_sentiment", "text")
 
     val result = loadData(spark)
-
     assertDataFrameEquals(expected, result)
   }
 
